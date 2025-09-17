@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediBuddy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css')}}">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="bot-avatar">
+                <div class="avatar-img"><i class="fas fa-user-md"></i></div>
+                <div class="status-indicator online"></div>
+            </div>
+            <div class="bot-info">
+                <h4 class="bot-name">MediBuddy</h4>
+                <p class="bot-status">Online • Ready to help</p>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn" title="Settings"><i class="fas fa-cog"></i></button>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="messagesContainer" class="messages-container">
+            <div class="welcome-message">
+                <div class="welcome-avatar"><i class="fas fa-stethoscope"></i></div>
+                <div class="welcome-content">
+                    <h5>Welcome to Medibuddy</h5>
+                    <p>I'm here to help answer your medical questions and provide health information. How can I assist you today?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <form id="messageForm" class="message-form">
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" maxlength="500" required>
+                    <div class="input-actions">
+                        <button type="submit" class="send-btn" title="Send message"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            function scrollToBottom() {
+                $("#messagesContainer").scrollTop($("#messagesContainer")[0].scrollHeight);
+            }
+
+            $("#messageForm").on("submit", function(event) {
+                event.preventDefault();
+                
+                const date = new Date();
+                const str_time = date.getHours() + ":" + String(date.getMinutes()).padStart(2, '0');
+                var rawText = $("#messageInput").val();
+
+                if (!rawText.trim()) return;
+
+                // User message
+                var userHtml = `
+                    <div class="message user">
+                        <div class="message-content">
+                            <div class="message-avatar"><i class="fas fa-user"></i></div>
+                            <div class="message-wrapper">
+                                <div class="message-bubble">${rawText}</div>
+                                <div class="message-time">${str_time}</div>
+                            </div>
+                        </div>
+                    </div>`;
+                
+                $("#messageInput").val("");
+                $("#messagesContainer").append(userHtml);
+                scrollToBottom();
+
+                // Typing indicator
+                var typingHtml = `
+                    <div class="message bot typing" id="typingIndicator">
+                        <div class="message-content">
+                            <div class="message-avatar"><i class="fas fa-user-md"></i></div>
+                            <div class="message-wrapper">
+                                <div class="message-bubble">
+                                    <div class="typing-indicator">
+                                        <div class="typing-dots">
+                                            <span></span><span></span><span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                $("#messagesContainer").append(typingHtml);
+                scrollToBottom();
+
+                // Send to server
+                $.ajax({
+                    data: { msg: rawText },
+                    type: "POST",
+                    url: "/get"
+                }).done(function(data) {
+                    $("#typingIndicator").remove();
+                    var botHtml = `
+                        <div class="message bot">
+                            <div class="message-content">
+                                <div class="message-avatar"><i class="fas fa-user-md"></i></div>
+                                <div class="message-wrapper">
+                                    <div class="message-bubble">${data.answer}</div>
+                                    <div class="message-time">${str_time}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    $("#messagesContainer").append(botHtml);
+                    scrollToBottom();
+                }).fail(function() {
+                    $("#typingIndicator").remove();
+                    var errorHtml = `
+                        <div class="message bot">
+                            <div class="message-content">
+                                <div class="message-avatar"><i class="fas fa-user-md"></i></div>
+                                <div class="message-wrapper">
+                                    <div class="message-bubble">Sorry, I'm having trouble connecting. Please try again.</div>
+                                    <div class="message-time">${str_time}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    $("#messagesContainer").append(errorHtml);
+                    scrollToBottom();
+                });
+            });
+        });
+    </script>
+</body>
+</html>
